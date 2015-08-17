@@ -5,11 +5,17 @@ A simple JSON REST request abstraction layer that is used by the
 
 import io
 import pkg_resources
-import socket
+#import socket
 import ssl
 import sys
 import urllib
+import urllib2
 
+def mock_urlopen(method,url,body,headers,preload_content):
+    request = urllib2.Request(url, body, headers=headers)
+    r = urllib2.urlopen(request)
+    return r         
+    
 try:
     import json
 except ImportError:
@@ -23,7 +29,10 @@ except ImportError:
 
 SDK_VERSION = "2.2.0"
 
-TRUSTED_CERT_FILE = pkg_resources.resource_filename(__name__, 'trusted-certs.crt')
+try:
+    TRUSTED_CERT_FILE = pkg_resources.resource_filename(__name__, 'trusted-certs.crt')
+except:
+    TRUSTED_CERT_FILE = file('trusted-certs.crt')
 
 
 class RESTResponse(io.IOBase):
@@ -125,6 +134,7 @@ class RESTResponse(io.IOBase):
         pass
 
 def create_connection(address):
+    return
     host, port = address
     err = None
     for res in socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM):
@@ -152,7 +162,7 @@ def json_loadb(data):
 
 
 class RESTClientObject(object):
-    def __init__(self, max_reusable_connections=8, mock_urlopen=None):
+    def __init__(self, max_reusable_connections=8, mock_urlopen=mock_urlopen):
         """
         Parameters
             max_reusable_connections
@@ -206,7 +216,7 @@ class RESTClientObject(object):
                 raise ValueError("headers should not contain newlines (%s: %s)" %
                                  (key, value))
 
-        try:
+        if True:
             # Grab a connection from the pool to make the request.
             # We return it to the pool when caller close() the response
             urlopen = self.mock_urlopen if self.mock_urlopen else self.pool_manager.urlopen
@@ -217,14 +227,14 @@ class RESTClientObject(object):
                 headers=headers,
                 preload_content=False
             )
-            r = RESTResponse(r) # wrap up the urllib3 response before proceeding
-        except socket.error as e:
-            raise RESTSocketError(url, e)
-        except urllib3.exceptions.SSLError as e:
-            raise RESTSocketError(url, "SSL certificate error: %s" % e)
+            #r = RESTResponse(r) # wrap up the urllib3 response before proceeding
+        #except socket.error as e:
+        #    raise RESTSocketError(url, e)
+        #except urllib3.exceptions.SSLError as e:
+        #    raise RESTSocketError(url, "SSL certificate error: %s" % e)
 
-        if r.status not in (200, 206):
-            raise ErrorResponse(r, r.read())
+        #if r.status not in (200, 206):
+        #    raise ErrorResponse(r, r.read())
 
         return self.process_response(r, raw_response)
 
@@ -321,10 +331,11 @@ class RESTClient(object):
         return cls.IMPL.PUT(*n, **kw)
 
 
-class RESTSocketError(socket.error):
+class RESTSocketError():
     """A light wrapper for ``socket.error`` that adds some more information."""
 
     def __init__(self, host, e):
+        return
         msg = "Error connecting to \"%s\": %s" % (host, str(e))
         socket.error.__init__(self, msg)
 
